@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sapah Bale 3D - 織品完整版</title>
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #222; font-family: 'Microsoft JhengHei', 'Courier New', monospace; }
+        
+        /* UI 介面層 */
+        #ui-layer {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 320px;
+            background: rgba(0, 0, 0, 0.8);
+            border: 2px solid #8b5a2b;
+            border-radius: 8px;
+            padding: 20px;
+            color: white;
+            pointer-events: none;
+            user-select: none;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.6);
+        }
+
+        .title {
+            font-size: 1.4rem;
+            color: #ffcc00;
+            margin-bottom: 15px;
+            text-align: center;
+            border-bottom: 1px solid #666;
+            padding-bottom: 10px;
+            font-weight: bold;
+        }
+
+        .data-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin: 12px 0;
+            font-size: 1rem;
+        }
+        
+        .label { width: 90px; color: #ddd; }
+        .value-group { text-align: right; flex-grow: 1; }
+        .value-number { font-weight: bold; font-size: 1.1rem; margin-right: 8px; }
+        .status-note { font-size: 0.9rem; padding: 2px 6px; border-radius: 4px; display: inline-block; min-width: 40px; text-align: center;}
+
+        /* 狀態顏色 */
+        .status-good { color: #4caf50; border: 1px solid #4caf50; background: rgba(76, 175, 80, 0.1); }
+        .status-bad { color: #ff5252; border: 1px solid #ff5252; background: rgba(255, 82, 82, 0.1); }
+        .status-dry { color: #ffbb33; border: 1px solid #ffbb33; background: rgba(255, 187, 51, 0.1); }
+
+        #alert-box {
+            position: absolute;
+            bottom: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(200, 50, 50, 0.9);
+            border: 3px solid #ff9999;
+            padding: 15px 40px;
+            color: white;
+            font-size: 1.5rem;
+            display: none;
+            pointer-events: auto;
+            cursor: pointer;
+            text-align: center;
+            border-radius: 50px;
+            box-shadow: 0 0 30px rgba(255, 0, 0, 0.6);
+            transition: transform 0.2s;
+        }
+        #alert-box:hover { transform: translateX(-50%) scale(1.05); }
+
+        .controls-hint {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            color: #ccc;
+            font-size: 0.85rem;
+            pointer-events: none;
+        }
+    </style>
+    
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+</head>
+<body>
+
+    <div id="ui-layer">
+        <div class="title">SAPAH BALE 環境監測</div>
+        
+        <div class="data-row">
+            <span class="label">溫度</span>
+            <div class="value-group">
+                <span id="d-temp" class="value-number">--</span>
+                <span id="n-temp" class="status-note">--</span>
+            </div>
+        </div>
+
+        <div class="data-row">
+            <span class="label">濕度</span>
+            <div class="value-group">
+                <span id="d-hum" class="value-number">--</span>
+                <span id="n-hum" class="status-note">--</span>
+            </div>
+        </div>
+
+        <div class="data-row">
+            <span class="label">PM 2.5</span>
+            <div class="value-group">
+                <span id="d-pm25" class="value-number">--</span>
+                <span id="n-pm25" class="status-note">--</span>
+            </div>
+        </div>
+
+        <div class="data-row">
+            <span class="label">CO 濃度</span>
+            <div class="value-group">
+                <span id="d-co" class="value-number">--</span>
+                <span id="n-co" class="status-note">--</span>
+            </div>
+        </div>
+        
+        <div style="margin-top:15px; font-size:0.8rem; color:#bbb; text-align:center; border-top:1px solid #8b5a2b; padding-top:10px;">
+            <span id="status-text">系統連線中...</span>
+        </div>
+    </div>
+
+    <div id="alert-box">
+        🔥 柴火熄滅 (點擊添加)
+    </div>
+
+    <div class="controls-hint">左鍵旋轉 | 右鍵平移 | 滾輪縮放</div>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+        // === 1. 場景初始化 ===
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x333333);
+        scene.fog = new THREE.Fog(0x333333, 25, 70); 
+
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(13, 17, 13);
+        camera.lookAt(0, 0, 0);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        document.body.appendChild(renderer.domElement);
+
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        
+        // === 2. 燈光設定 ===
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.8); 
+        scene.add(ambientLight);
+
+        const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        dirLight.position.set(-12, 25, -8);
+        dirLight.castShadow = true;
+        scene.add(dirLight);
+
+        const fireLight = new THREE.PointLight(0xffaa00, 1.8, 28);
+        fireLight.position.set(4, 3, -3);
+        fireLight.castShadow = true;
+        scene.add(fireLight);
+
+
+        // === 3. 建構物體 (系統核心) ===
+        const boxGeo = new THREE.BoxGeometry(1, 1, 1);
+        
+        function createVoxel(x, y, z, color, sx=1, sy=1, sz=1) {
+            const mat = new THREE.MeshStandardMaterial({ color: color, roughness: 0.85, metalness: 0.1 });
+            const mesh = new THREE.Mesh(boxGeo, mat);
+            // 修正座標計算：這個函數的邏輯是輸入的 x,y,z 為中心點位置
+            // 因此我們需要精確控制 Y 值來避免重疊
+            mesh.position.set(x + (sx - 1) * 0.5, y + (sy - 1) * 0.5, z + (sz - 1) * 0.5);
+            mesh.scale.set(sx, sy, sz);
+            mesh.castShadow = true;
+            mesh.receiveShadow = true;
+            scene.add(mesh);
+            return mesh;
+        }
+
+        // 地板
+        for (let x = -10; x <= 10; x++) {
+            for (let z = -10; z <= 10; z++) {
+                createVoxel(x, -0.5, z, Math.random() > 0.8 ? 0x555555 : 0x444444);
+            }
+        }
+
+        // 木板牆
+        function buildWoodenWall(startX, startZ, dirX, dirZ, length, height) {
+            for (let i = 0; i < length; i++) {
+                for (let h = 0; h < height; h++) {
+                    let woodColor = (h % 2 === 0) ? 0x7c5033 : 0x9c6a3b;
+                    if (Math.random() > 0.85) woodColor = 0x6d4c41;
+                    createVoxel(startX + i*dirX, h + 0.5, startZ + i*dirZ, woodColor);
+                }
+            }
+        }
+        buildWoodenWall(-10, -10, 0, 1, 21, 7); 
+        buildWoodenWall(-10, -10, 1, 0, 21, 7); 
+
+        // --- 更新：超大竹床 (XL Bed) ---
+        const bedStartX = -9; const bedEndX = 0;
+        const bedStartZ = -9; const bedEndZ = -1;
+        const legHeight = 1.5; 
+        const bedThickness = 0.2;
+        const legColor = 0x5c4033;
+
+        // --- 關鍵修正：床腳位置 ---
+        // 將床腳的 Y 中心點從 0.5 降低到 0，確保其頂部低於床板底部
+        for(let x = bedStartX; x <= bedEndX; x+=4.5) {
+             for(let z = bedStartZ; z <= bedEndZ; z+=4) {
+                 // 這裡將原本的 y=0.5 改為 y=0
+                 createVoxel(x, 0, z, legColor, 0.8, legHeight, 0.8);
+             }
+        }
+
+        // 床板 (位置不變，現在會蓋在腳上面)
+        const bedWidth = Math.abs(bedEndX - bedStartX) + 1;
+        const bedDepth = Math.abs(bedEndZ - bedStartZ) + 1;
+        createVoxel(bedStartX, legHeight, bedStartZ, 0xd4a857, bedWidth, bedThickness, bedDepth);
+
+        // --- 高解析度精細織品 ---
+        const fabricBaseY = legHeight + bedThickness + 0.02; 
+        const white = 0xeeeeee; const red = 0xcc0000; const black = 0x111111;
+        const pixelSize = 0.25; 
+
+        for (let x = bedStartX; x <= bedEndX; x += pixelSize) {
+            for (let z = bedStartZ; z <= bedEndZ; z += pixelSize) {
+                let patternX = Math.abs(x) % 4; 
+                let patternZ = Math.abs(z) % 4;
+                let dist = Math.abs(patternX - 2) + Math.abs(patternZ - 2);
+                
+                let color = white;
+                if (dist < 0.25) color = red;
+                else if (dist < 0.75 && dist >= 0.5) color = black;
+                else if (dist < 1.5 && dist >= 1.0) color = red;
+                else if (dist < 1.75 && dist >= 1.5) color = black;
+                else if (dist > 2.5 && dist < 3.0) color = red;
+
+                // 織品現在會完整覆蓋，不會被床腳擋住了
+                createVoxel(x, fabricBaseY, z, color, pixelSize, 0.04, pixelSize);
+            }
+        }
+
+        // --- 弓箭架與擺設 ---
+        const rackX = 3; const rackZ = -9; 
+        const rackScale = 1.4;
+
+        // 架子
+        createVoxel(rackX, 2.5*rackScale, rackZ, 0x8f6e32, 0.4*rackScale, 4*rackScale, 0.4*rackScale);
+        createVoxel(rackX+3*rackScale, 2.5*rackScale, rackZ, 0x8f6e32, 0.4*rackScale, 4*rackScale, 0.4*rackScale);
+        createVoxel(rackX+0.2*rackScale, 3.5*rackScale, rackZ, 0xd4a857, 2.8*rackScale, 0.2*rackScale, 0.3*rackScale);
+        createVoxel(rackX+0.2*rackScale, 2.0*rackScale, rackZ, 0xd4a857, 2.8*rackScale, 0.2*rackScale, 0.3*rackScale);
+
+        // 弓與箭
+        const bowColor = 0x6b4226;
+        createVoxel(rackX+0.5*rackScale, 3.8*rackScale, rackZ+0.3, bowColor, 0.3*rackScale, 1.0*rackScale, 0.3*rackScale); 
+        createVoxel(rackX+0.7*rackScale, 3.0*rackScale, rackZ+0.3, bowColor, 0.3*rackScale, 1.2*rackScale, 0.3*rackScale); 
+        createVoxel(rackX+0.5*rackScale, 2.2*rackScale, rackZ+0.3, bowColor, 0.3*rackScale, 1.0*rackScale, 0.3*rackScale); 
+        createVoxel(rackX+0.4*rackScale, 3.0*rackScale, rackZ+0.3, 0xcccccc, 0.08*rackScale, 2.0*rackScale, 0.08*rackScale);
+        createVoxel(rackX+1.5*rackScale, 3.6*rackScale, rackZ+0.2, 0x8b5a2b, 3.0*rackScale, 0.15*rackScale, 0.15*rackScale); 
+        createVoxel(rackX+4.5*rackScale, 3.6*rackScale, rackZ+0.2, 0x333333, 0.4*rackScale, 0.25*rackScale, 0.25*rackScale); 
+
+        // 擺設
+        createVoxel(2, 0.6, -2, 0x5c4033, 1.2, 0.8, 1.2); // 大樹樁
+        createVoxel(5, 0.4, -1, 0x6b4226, 0.8, 0.6, 0.8); // 小樹樁
+        createVoxel(6, 0.5, 5, 0xa0522d, 1.4, 1.2, 1.4); createVoxel(6, 1.6, 5, 0x804020, 1.0, 0.5, 1.0); // 大甕
+        createVoxel(4.5, 0.4, 6, 0x8b4513, 1.0, 0.8, 1.0); // 矮胖陶鍋
+        createVoxel(5.5, 0.2, 7, 0xcd853f, 0.6, 0.4, 0.6); // 小陶碗
+
+        // 懸掛物
+        createVoxel(4, 5.5, -3, 0x8b4513, 0.2, 1.5, 0.2); createVoxel(4, 4.5, -3, 0xd2691e, 0.8, 0.6, 0.6);
+        createVoxel(3, 5.5, -3, 0x8b4513, 0.2, 1.2, 0.2); createVoxel(3, 4.8, -3, 0xffdb58, 0.5, 0.8, 0.5);
+
+        // 柴火堆
+        const firePos = { x: 4, y: 0.5, z: -3 };
+        for(let i=0; i<3; i++) for(let j=0; j<3; j++) {
+            if(i==1 && j==1) continue;
+            createVoxel(firePos.x-1+i, 0.2, firePos.z-1+j, 0x555555, 1, 0.6, 1);
+        }
+        createVoxel(firePos.x, 0.6, firePos.z, 0x6b4226, 0.8, 0.4, 1.2);
+        createVoxel(firePos.x, 0.8, firePos.z, 0x6b4226, 1.2, 0.4, 0.8);
+
+
+        // === 4. 粒子與模擬邏輯 ===
+        const particles = [];
+        const particleGeo = new THREE.BoxGeometry(1, 1, 1);
+        const particleMat = new THREE.MeshBasicMaterial({ color: 0xff7700 });
+
+        function createFireParticle() {
+            if (!simData.isBurning) return;
+            const p = new THREE.Mesh(particleGeo, particleMat);
+            const scale = 0.15 + Math.random()*0.25;
+            p.scale.set(scale, scale, scale);
+            p.position.set(firePos.x + (Math.random()-0.5), firePos.y + 0.5, firePos.z + (Math.random()-0.5));
+            scene.add(p);
+            particles.push({ mesh: p, speed: 0.04 + Math.random()*0.05 });
+        }
+
+        const simData = { isBurning: true, temp: 22.0, hum: 65.0, pm25: 35, co: 7 }; 
+        
+        const els = {
+            d_temp: document.getElementById('d-temp'), n_temp: document.getElementById('n-temp'),
+            d_hum: document.getElementById('d-hum'), n_hum: document.getElementById('n-hum'),
+            d_pm25: document.getElementById('d-pm25'), n_pm25: document.getElementById('n-pm25'),
+            d_co: document.getElementById('d-co'), n_co: document.getElementById('n-co'),
+            status: document.getElementById('status-text'),
+            alert: document.getElementById('alert-box')
+        };
+
+        function toggleFire(burning) {
+            simData.isBurning = burning;
+            if (burning) {
+                fireLight.intensity = 1.8;
+                els.alert.style.display = 'none';
+                els.status.innerText = "監測中 - 燃燒乾燥模式";
+                els.status.style.color = "#ffcc00";
+            } else {
+                fireLight.intensity = 0;
+                els.alert.style.display = 'block';
+                els.status.innerText = "警告 - 柴火熄滅 (濕度回升)";
+                els.status.style.color = "#ff5252";
+            }
+        }
+
+        els.alert.addEventListener('click', () => toggleFire(true));
+
+        function evaluate(val, type) {
+            let text = "", statusClass = "status-good";
+            if (type === 'temp') {
+                if (val >= 18 && val <= 28) { text = "適宜"; }
+                else { text = val < 18 ? "過冷" : "過熱"; statusClass = "status-bad"; }
+            } 
+            else if (type === 'hum') {
+                if (val >= 40 && val <= 70) { text = "舒適"; }
+                else if (val < 40) { text = "乾燥"; statusClass = "status-dry"; }
+                else { text = "潮濕"; statusClass = "status-bad"; }
+            }
+            else if (type === 'pm25') {
+                if (val <= 35) { text = "良好"; }
+                else if (val <= 75) { text = "普通"; statusClass = "status-dry"; }
+                else { text = "不佳"; statusClass = "status-bad"; }
+            }
+            else if (type === 'co') {
+                if (val < 9) { text = "安全"; }
+                else if (val < 25) { text = "注意"; statusClass = "status-dry"; }
+                else { text = "危險"; statusClass = "status-bad"; }
+            }
+            return { text, class: statusClass };
+        }
+
+        function updateDisplay() {
+            els.d_temp.innerText = simData.temp.toFixed(1) + "°C";
+            els.d_hum.innerText = simData.hum.toFixed(1) + "%";
+            els.d_pm25.innerText = Math.floor(simData.pm25);
+            els.d_co.innerText = Math.floor(simData.co) + " ppm";
+
+            const eTemp = evaluate(simData.temp, 'temp'); els.n_temp.innerText = eTemp.text; els.n_temp.className = 'status-note ' + eTemp.class;
+            const eHum = evaluate(simData.hum, 'hum'); els.n_hum.innerText = eHum.text; els.n_hum.className = 'status-note ' + eHum.class;
+            const ePm = evaluate(simData.pm25, 'pm25'); els.n_pm25.innerText = ePm.text; els.n_pm25.className = 'status-note ' + ePm.class;
+            const eCo = evaluate(simData.co, 'co'); els.n_co.innerText = eCo.text; els.n_co.className = 'status-note ' + eCo.class;
+        }
+
+        setInterval(() => {
+            if (simData.isBurning && Math.random() < 0.05) toggleFire(false);
+
+            let noise = (Math.random()-0.5) * 0.2;
+            if (simData.isBurning) {
+                simData.temp = Math.min(26, simData.temp + 0.2 + noise);
+                simData.hum = Math.max(48, simData.hum - 0.3 + noise); 
+                simData.pm25 = Math.min(85, simData.pm25 + Math.random()*3); 
+                simData.co = Math.min(12, Math.max(6, simData.co + noise)); 
+            } else {
+                simData.temp = Math.max(15, simData.temp - 0.1 + noise);
+                simData.hum = Math.min(95, simData.hum + 0.5 + noise); 
+                simData.pm25 = Math.max(15, simData.pm25 - 2);
+                simData.co = Math.max(0, simData.co - 0.5);
+            }
+            updateDisplay();
+        }, 1000);
+
+        function animate() {
+            requestAnimationFrame(animate);
+            if (simData.isBurning && Math.random() > 0.7) createFireParticle();
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.mesh.position.y += p.speed;
+                p.mesh.scale.multiplyScalar(0.96);
+                if (p.mesh.scale.x < 0.01 || !simData.isBurning) { scene.remove(p.mesh); particles.splice(i, 1); }
+            }
+            if (simData.isBurning) fireLight.intensity = 1.8 + (Math.random() - 0.5) * 0.7;
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        animate();
+        toggleFire(true);
+        updateDisplay();
+
+    </script>
+</body>
+</html>
