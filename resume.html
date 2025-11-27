@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chen Sheng Pang | Portfolio</title>
+    <style>
+        /* --- 全域設定 --- */
+        :root {
+            --primary-color: #2E8B57; /* 配合農企業與自然的綠色 */
+            --accent-color: #40E0D0; /* 你履歷上的青色 */
+            --text-dark: #333;
+            --text-light: #666;
+            --bg-light: #f9f9f9;
+        }
+        
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: var(--text-dark);
+            margin: 0;
+            padding: 0;
+        }
+
+        a { text-decoration: none; color: inherit; }
+        ul { list-style: none; padding: 0; }
+
+        /* --- 版面配置 --- */
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* --- Header / Hero Section --- */
+        header {
+            background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+            color: white;
+            padding: 80px 20px;
+            text-align: center;
+        }
+
+        h1 { margin: 0; font-size: 3em; letter-spacing: 1px; } 
+        .tagline { font-size: 1.3em; opacity: 0.9; margin-top: 15px; }
+        
+        .contact-info {
+            margin-top: 25px;
+            font-size: 1em;
+        }
+
+        /* --- Section 共用樣式 --- */
+        section {
+            padding: 40px 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        h2 {
+            color: var(--primary-color);
+            border-left: 5px solid var(--accent-color);
+            padding-left: 15px;
+            margin-bottom: 30px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* --- 內容區塊 --- */
+        .content-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+        }
+
+        @media (min-width: 768px) {
+            .content-grid { grid-template-columns: 1fr 1fr; }
+        }
+        
+        /* 興趣區塊改為三欄排版，讓三個興趣更清楚 */
+        .interests-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+        }
+        @media (min-width: 768px) {
+            .interests-grid { grid-template-columns: 1fr 1fr 1fr; }
+        }
+
+        .item-card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            transition: transform 0.2s;
+            height: 100%; /* 讓卡片等高 */
+            box-sizing: border-box;
+        }
+
+        .item-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .job-title { font-weight: bold; font-size: 1.1em; }
+        .company, .date { color: var(--text-light); font-size: 0.9em; display: block; margin-bottom: 10px; }
+
+        /* --- 技能與語言 --- */
+        .skills-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .skill-tag {
+            background: var(--bg-light);
+            padding: 5px 15px;
+            border-radius: 20px;
+            border: 1px solid #ddd;
+            font-size: 0.9em;
+        }
+
+        .highlight { color: var(--primary-color); font-weight: bold; }
+
+        /* --- Footer --- */
+        footer {
+            text-align: center;
+            padding: 20px;
+            background: #333;
+            color: white;
+            font-size: 0.8em;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <h1>CHEN, SHENG-PANG</h1>
+            <p class="tagline">Agribusiness & Bio-industrial Mechatronics Engineering Student</p>
+            <div class="contact-info">
+                <span>📍 NCHU, Taiwan</span> | 
+                <span>Effective Communicator</span> | 
+                <span>Growth-oriented</span>
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+        
+        <section id="education">
+            <h2>Education</h2>
+            <div class="item-card">
+                <div class="job-title">National Chung Hsing University (NCHU)</div>
+                <span class="date">Current</span>
+                <p><strong>Double Major:</strong></p>
+                <ul>
+                    <li>International Bachelor Program in Agribusiness</li>
+                    <li>Bio-industrial Mechatronics Engineering</li>
+                </ul>
+                <p class="highlight">GPA: 3.69 | Total Credits: 106</p>
+            </div>
+        </section>
+
+        <section id="experience">
+            <h2>Work Experience</h2>
+            <div class="content-grid">
+                <div class="item-card">
+                    <div class="job-title">Tutor</div>
+                    <span class="company">YongLin Foundation & Private Tutoring</span>
+                    <p>Designed lesson plans for volunteer activities. Learned to internalize instructions and express them clearly. Developed empathy and patience in communication.</p>
+                </div>
+                <div class="item-card">
+                    <div class="job-title">Assembly Technician</div>
+                    <span class="company">JISHING INDUSTRY</span>
+                    <p>Gained experience in effective team communication and task delegation. Strengthened ability to work under pressure during tight deadlines.</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="volunteering">
+            <h2>Volunteer Service</h2>
+            <p style="margin-bottom: 20px; color: #666;">Service at Ka Li Elementary School (喀哩國小) - Mingdao High School Service Learning</p>
+            <div class="content-grid">
+                <div class="item-card">
+                    <div class="job-title">2022 Winter Camp "Starry Night"</div>
+                    <span class="date">Jan 2022 | 40 Hours</span>
+                    <p>Assisted in organizing the education camp. Recognized for active participation and outstanding performance.</p>
+                </div>
+                <div class="item-card">
+                    <div class="job-title">2021 Winter Camp "Starry Night"</div>
+                    <span class="date">Jan 2021 | 30 Hours</span>
+                    <p>Role: Service Volunteer. Assisted in camp logistics and student guidance.</p>
+                </div>
+                <div class="item-card">
+                    <div class="job-title">2020 Summer Camp "Starry Night"</div>
+                    <span class="date">Aug 2020 | 50 Hours</span>
+                    <p>Dedicated 50 hours of service during the summer education camp.</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="awards">
+            <h2>Awards & Honors</h2>
+            <ul>
+                <li>🏆 <strong>1st Place</strong>, NCHU English Impromptu Speech Contest, 2023</li>
+                <li>🏅 Awardee of Scholarship of <br>113華民國農會永續農業人才培育獎學金</li>
+            </ul>
+        </section>
+
+        <section id="skills">
+            <h2>Language & Skills</h2>
+            <div class="skills-container">
+                <div class="skill-tag">Chinese (Native)</div>
+                <div class="skill-tag">English (Fluent)</div>
+                <div class="skill-tag">German (Basic)</div>
+                <div class="skill-tag">C++ Programming (Beginner)</div>
+                <div class="skill-tag">Team Leadership</div>
+                <div class="skill-tag">Public Speaking</div>
+            </div>
+            <p style="margin-top: 15px; font-size: 0.9em; color: #666;">
+                * Freshman English Grades: 89 & 90 (Top tier ranking)
+            </p>
+        </section>
+
+        <section id="interests">
+            <h2>Interests</h2>
+            <div class="interests-grid">
+                <div class="item-card">
+                    <div class="job-title" style="margin-bottom: 5px;">🏃 Track & Field</div>
+                    <p>Former Track & Field team member. Continued passion for competitive sports.</p>
+                </div>
+                <div class="item-card">
+                    <div class="job-title" style="margin-bottom: 5px;">🏊🚴🏃 Triathlon</div>
+                    <p>4th place in S20 category at 2024 Tainan National Triathlon Championship.</p>
+                </div>
+                <div class="item-card">
+                    <div class="job-title" style="margin-bottom: 5px;">🚲 Cycling</div>
+                    <p>Active member of the university cycling club. Served as a <strong>Club Mechanic</strong> (Repair Technician).</p>
+                </div>
+            </div>
+        </section>
+
+    </div>
+
+    <footer>
+        <p>&copy; 2025 Chen Sheng Pang. All Rights Reserved.</p>
+        <p>Hosted on GitHub Pages</p>
+    </footer>
+
+</body>
+</html>
