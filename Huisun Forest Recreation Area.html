@@ -17,7 +17,6 @@
 
         /* 區塊 1：Hero Section (主視覺橫幅) */
         .hero {
-            /* 已經換成你提供的惠蓀林場圖片網址 */
             background: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url('https://cja.tw/images/Attractions/around/huisun-960.jpg') center/cover;
             color: white;
             text-align: center;
@@ -81,7 +80,7 @@
         }
         .card {
             background: white;
-            padding: 40px 30px;
+            padding: 30px;
             border-radius: 10px;
             box-shadow: 0 10px 20px rgba(0,0,0,0.05);
             flex: 1 1 300px;
@@ -92,13 +91,18 @@
         .card:hover {
             transform: translateY(-10px);
         }
+        /* 新增的圖片樣式，讓三張圖看起來一樣高且整齊 */
+        .pillar-img {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
         .card h3 {
             color: #8B5A2B;
             font-size: 1.5em;
-            margin-top: 15px;
-        }
-        .icon {
-            font-size: 3em;
+            margin-top: 10px;
         }
 
         /* 區塊 3：Logistics & Sustainability (後勤與永續) */
@@ -193,17 +197,17 @@
         <h2 class="section-title">The Three Pillars of the Tour</h2>
         <div class="grid-3">
             <div class="card">
-                <div class="icon">🌿</div>
+                <img src="https://canr.nchu.edu.tw/upload/internation_upload/1507/%E6%83%A0%E8%93%80%E6%9E%97%E5%A0%B4%E6%9D%9C%E9%B5%91%E8%8A%B1%E7%B6%BB%E6%94%BE%EF%BC%8C%E9%BB%9E%E7%B6%B4%E5%9C%A8%E7%B6%A0%E6%9E%97%E4%B8%AD%E5%A2%9E%E6%B7%BB%E6%98%A5%E6%84%8F%E3%80%82%EF%BC%88%E6%83%A0%E8%93%80%E6%9E%97%E5%A0%B4%E6%8F%90%E4%BE%9B%EF%BC%89.jpg" alt="Green Healing" class="pillar-img">
                 <h3>Green Healing</h3>
                 <p>Step into the forest. Let the phytoncides reduce your stress and heal your urban fatigue through mindful nature walks.</p>
             </div>
             <div class="card">
-                <div class="icon">☕</div>
+                <img src="https://i0.wp.com/shop.nchu.edu.tw/nchumart/wp-content/uploads/2021/08/%E6%8A%95%E5%BD%B1%E7%89%874.jpg?fit=2362%2C2362&ssl=1" alt="Agri-Education" class="pillar-img">
                 <h3>Agri-Education</h3>
                 <p>From bean to cup. Experience the century-old Arabica coffee culture of Huisun and understand sustainable farming practices.</p>
             </div>
             <div class="card">
-                <div class="icon">🤝</div>
+                <img src="https://cdn-smiletaiwan.cw.com.tw/article/202101/article-6011986d2dd10.jpg" alt="Local Inclusion" class="pillar-img">
                 <h3>Local Inclusion</h3>
                 <p>Travel with purpose. Support the local indigenous communities and farmers to ensure our journey preserves cultural heritage.</p>
             </div>
