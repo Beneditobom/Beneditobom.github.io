@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Huisun Forest Recreation Area: Agro-Eco Tourism</title>
+    <style>
+        /* 全域設定 */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            color: #333;
+            line-height: 1.6;
+            background-color: #FAFAFA;
+        }
+
+        /* 區塊 1：Hero Section (主視覺橫幅) */
+        .hero {
+            background: linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.6)), url('https://images.unsplash.com/photo-1542273917363-3b1817f69a2d?auto=format&fit=crop&w=1920&q=80') center/cover;
+            color: white;
+            text-align: center;
+            padding: 120px 20px;
+        }
+        .hero h1 {
+            font-size: 3.5em;
+            margin-bottom: 10px;
+            letter-spacing: 2px;
+        }
+        .hero p {
+            font-size: 1.2em;
+            max-width: 800px;
+            margin: 0 auto 40px auto;
+            color: #E9F0E9;
+        }
+        .btn {
+            display: inline-block;
+            background-color: #4CAF50;
+            color: white;
+            padding: 15px 35px;
+            text-decoration: none;
+            border-radius: 30px;
+            font-weight: bold;
+            font-size: 1.1em;
+            transition: background 0.3s, transform 0.2s;
+        }
+        .btn:hover {
+            background-color: #45a049;
+            transform: scale(1.05);
+        }
+
+        /* 通用區塊設定 */
+        .section {
+            padding: 80px 20px;
+            max-width: 1100px;
+            margin: 0 auto;
+            text-align: center;
+        }
+        .section-title {
+            font-size: 2.5em;
+            color: #2E5C31;
+            margin-bottom: 50px;
+            position: relative;
+        }
+        .section-title::after {
+            content: '';
+            width: 60px;
+            height: 3px;
+            background-color: #8B5A2B;
+            display: block;
+            margin: 15px auto 0;
+        }
+
+        /* 區塊 2：Why Choose Us? (三大核心精神) */
+        .grid-3 {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 30px;
+        }
+        .card {
+            background: white;
+            padding: 40px 30px;
+            border-radius: 10px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.05);
+            flex: 1 1 300px;
+            text-align: center;
+            border-top: 5px solid #2E5C31;
+            transition: transform 0.3s;
+        }
+        .card:hover {
+            transform: translateY(-10px);
+        }
+        .card h3 {
+            color: #8B5A2B;
+            font-size: 1.5em;
+            margin-top: 15px;
+        }
+        .icon {
+            font-size: 3em;
+        }
+
+        /* 區塊 3：Logistics & Sustainability (後勤與永續) */
+        .logistics-box {
+            background-color: #E9F0E9;
+            padding: 40px;
+            border-radius: 10px;
+            text-align: left;
+            max-width: 800px;
+            margin: 0 auto;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+        }
+        .logistics-box ul {
+            list-style: none;
+            padding: 0;
+            font-size: 1.1em;
+            margin: 0;
+        }
+        .logistics-box li {
+            margin-bottom: 20px;
+            display: flex;
+            align-items: flex-start;
+        }
+        .logistics-box li:last-child {
+            margin-bottom: 0;
+        }
+        .logistics-box li span {
+            font-size: 1.5em;
+            margin-right: 15px;
+            line-height: 1;
+        }
+
+        /* 區塊 4：The 72-Hour Experience (三日行程亮點) */
+        .itinerary-container {
+            text-align: left;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .itinerary-step {
+            background: white;
+            padding: 30px;
+            border-left: 6px solid #4CAF50;
+            margin-bottom: 25px;
+            border-radius: 0 8px 8px 0;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+        }
+        .itinerary-step h3 {
+            margin-top: 0;
+            color: #2E5C31;
+            font-size: 1.4em;
+        }
+        .itinerary-step span.day-badge {
+            background-color: #8B5A2B;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 0.8em;
+            margin-right: 10px;
+        }
+
+        /* 區塊 5：宣傳影片 */
+        .video-section p {
+            font-size: 1.2em;
+            color: #555;
+            margin-bottom: 30px;
+        }
+
+        /* 頁尾 */
+        footer {
+            background: #2E5C31;
+            color: white;
+            text-align: center;
+            padding: 30px 20px;
+            margin-top: 40px;
+        }
+        footer p {
+            margin: 5px 0;
+            font-size: 0.9em;
+            color: #d1e2d2;
+        }
+    </style>
+</head>
+<body>
+
+    <header class="hero">
+        <h1>Huisun Forest Recreation Area</h1>
+        <p>A Symphony of Green & Soil. Escape the city stress, reconnect with nature, learn sustainable farming, and support local communities in a 72-hour deep immersion.</p>
+        <a href="#itinerary" class="btn">Start Your Healing Journey</a>
+    </header>
+
+    <section class="section">
+        <h2 class="section-title">The Three Pillars of the Tour</h2>
+        <div class="grid-3">
+            <div class="card">
+                <div class="icon">🌿</div>
+                <h3>Green Healing</h3>
+                <p>Step into the forest. Let the phytoncides reduce your stress and heal your urban fatigue through mindful nature walks.</p>
+            </div>
+            <div class="card">
+                <div class="icon">☕</div>
+                <h3>Agri-Education</h3>
+                <p>From bean to cup. Experience the century-old Arabica coffee culture of Huisun and understand sustainable farming practices.</p>
+            </div>
+            <div class="card">
+                <div class="icon">🤝</div>
+                <h3>Local Inclusion</h3>
+                <p>Travel with purpose. Support the local indigenous communities and farmers to ensure our journey preserves cultural heritage.</p>
+            </div>
+        </div>
+    </section>
+
+    <section class="section" style="background-color: #f4f7f4;">
+        <h2 class="section-title">Travel Responsibly With Us</h2>
+        <div class="logistics-box">
+            <ul>
+                <li>
+                    <span>🚌</span>
+                    <div><strong>Transport:</strong> Eco-friendly routing using public transit (Nantou Bus) and low-carbon walking to minimize emissions.</div>
+                </li>
+                <li>
+                    <span>🏡</span>
+                    <div><strong>Lodging:</strong> Stay at Huisun’s certified eco-cabins to maximize your connection with nature while minimizing environmental footprint.</div>
+                </li>
+                <li>
+                    <span>♻️</span>
+                    <div><strong>Action:</strong> Strict Leave No Trace (LNT) policy and zero-plastic dining to preserve the beautiful ecosystem of Taichung and Nantou.</div>
+                </li>
+            </ul>
+        </div>
+    </section>
+
+    <section class="section" id="itinerary">
+        <h2 class="section-title">The 72-Hour Experience</h2>
+        <div class="itinerary-container">
+            <div class="itinerary-step">
+                <h3><span class="day-badge">Day 1</span>The Connection (Introduction)</h3>
+                <p><strong>Transition from chaos to peace.</strong> Arrive at our eco-friendly cabin and begin with a "Century of Aroma" coffee tasting, easing into the tranquil pace of the forest.</p>
+            </div>
+            <div class="itinerary-step">
+                <h3><span class="day-badge">Day 2</span>The Heart (Deep Immersion)</h3>
+                <p><strong>Dive deep into biodiversity.</strong> Experience guided forest bathing, visit a local coffee farm in Guoxing Township, and end the night observing the magical glow of fireflies (seasonal).</p>
+            </div>
+            <div class="itinerary-step">
+                <h3><span class="day-badge">Day 3</span>The Synthesis (Local Impact)</h3>
+                <p><strong>Leave a positive trace.</strong> Visit a nearby tribal community and farmers' market. Share traditional food and purchase sustainable souvenirs directly from local hands.</p>
+            </div>
+        </div>
+    </section>
+
+    <section class="section video-section" style="background-color: #f4f7f4;">
+        <h2 class="section-title">A Glimpse of Huisun</h2>
+        <p>Watch our 3-minute short video to preview the natural beauty and deep immersion awaiting you.</p>
+        <a href="https://www.youtube.com/watch?v=kSEx7mgGzAI" target="_blank" class="btn" style="background-color: #8B5A2B;">Watch the Video</a>
+    </section>
+
+    <footer>
+        <p>Contact Us: contact@huisunforest.com</p>
+        <p>&copy; 2026 IMPA Agro-Eco Tourism Project. Designed by Your Team Name.</p>
+    </footer>
+
+</body>
+</html>
