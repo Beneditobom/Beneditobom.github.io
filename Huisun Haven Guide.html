@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Huisun Haven | Digital Tour Guide</title>
+    <style>
+        :root {
+            --primary: #2C4C3B;
+            --secondary: #8E6B52;
+            --bg-color: #F7F5F0;
+            --text-dark: #333333;
+            --text-light: #555555;
+            --white: #FFFFFF;
+            --border: #E0E4E0;
+        }
+
+        body {
+            font-family: "Segoe UI", Arial, sans-serif;
+            margin: 0;
+            background-color: var(--bg-color);
+            color: var(--text-dark);
+            line-height: 1.7;
+            padding-bottom: 60px;
+            font-weight: normal;
+        }
+
+        h1, h2, h3, h4, h5, h6 { font-weight: normal; }
+
+        /* Header Style (Fancy Serif Text) */
+        header {
+            background: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.7)), url('https://cja.tw/images/Attractions/around/huisun-960.jpg') center/cover;
+            color: var(--white);
+            text-align: center;
+            padding: 70px 20px 40px;
+        }
+
+        header h1 { 
+            font-family: "Georgia", "Times New Roman", serif;
+            margin: 0; 
+            font-size: 2.8em; 
+            letter-spacing: 1px;
+        }
+        
+        header p { 
+            font-family: "Georgia", "Times New Roman", serif;
+            margin: 10px 0 0; 
+            font-size: 1.25em; 
+            color: #F0F0F0; 
+            font-style: italic;
+        }
+
+        /* Tabs Navigation */
+        .guide-nav {
+            display: flex;
+            background: var(--white);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 16px 0;
+            border: none;
+            background: none;
+            font-size: 1.05em;
+            color: #A0A0A0;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border-bottom: 3px solid transparent;
+            font-weight: normal;
+        }
+
+        .tab-btn.active {
+            color: var(--primary);
+            border-bottom: 3px solid var(--primary);
+            background-color: #F9FAF9;
+        }
+
+        .guide-content {
+            padding: 25px 15px;
+            max-width: 650px;
+            margin: 0 auto;
+        }
+
+        .day-panel { display: none; animation: fadeIn 0.4s ease; }
+        .day-panel.active { display: block; }
+
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        /* Accordion Itinerary Style */
+        .accordion {
+            background-color: var(--white);
+            color: var(--primary);
+            cursor: pointer;
+            padding: 18px;
+            width: 100%;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            text-align: left;
+            outline: none;
+            font-size: 1.1em;
+            transition: 0.3s;
+            display: flex;
+            justify-content: flex-start;
+            align-items: center;
+            margin-top: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.02);
+            font-weight: normal;
+        }
+
+        .accordion.active, .accordion:hover { background-color: #F0F4F2; }
+
+        .time-badge {
+            background-color: var(--primary);
+            color: var(--white);
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 0.85em;
+            margin-right: 15px;
+            min-width: 110px;
+            text-align: center;
+            font-weight: normal;
+        }
+
+        .accordion-icon { 
+            margin-left: auto; font-size: 1.2em; color: var(--secondary); transition: transform 0.3s ease; 
+        }
+        .accordion.active .accordion-icon { transform: rotate(45deg); }
+
+        .panel {
+            padding: 0 20px;
+            background-color: var(--white);
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.4s ease-out, padding 0.4s ease-out;
+            border-left: 1px solid var(--border);
+            border-right: 1px solid var(--border);
+            border-bottom: 1px solid var(--border);
+            border-radius: 0 0 8px 8px;
+            margin-bottom: 10px;
+            transform: translateY(-5px);
+        }
+
+        .panel.open { padding: 20px; max-height: 5000px; }
+
+        .panel-block { margin-bottom: 15px; font-size: 0.95em; color: var(--text-light); font-weight: normal; }
+        .highlight-text { color: var(--text-dark); font-weight: normal; }
+        
+        .tag-transport { 
+            display: inline-block; background: #E3F2FD; color: #1976D2; padding: 4px 10px; 
+            border-radius: 4px; font-size: 0.85em; margin-bottom: 10px; font-weight: normal;
+        }
+
+        .bus-link-btn {
+            display: inline-block; margin-top: 10px; margin-right: 10px; padding: 8px 14px;
+            background-color: #F0F4F8; color: #2980B9; text-decoration: none; border-radius: 6px;
+            font-size: 0.9em; border: 1px solid #D6EAF8; transition: background-color 0.2s; font-weight: normal;
+        }
+        .bus-link-btn:hover { background-color: #D6EAF8; }
+        
+        .tag-budget { 
+            background: #FFF8E1; border: 1px solid #FFE082; color: #795548; padding: 10px; 
+            border-radius: 6px; font-size: 0.9em; margin-top: 15px; font-weight: normal;
+        }
+        
+        .tag-contingency { 
+            font-size: 0.9em; color: #666; border-left: 3px solid #BDC3C7; padding-left: 12px; 
+            margin-top: 15px; background: #F9F9F9; padding-top: 8px; padding-bottom: 8px; font-weight: normal;
+        }
+
+        /* Route Map Style */
+        .route-map {
+            background: #F9FAF9; border: 1px solid var(--border); border-radius: 8px; 
+            padding: 20px 15px; margin: 15px 0;
+        }
+        .route-step { position: relative; padding-left: 25px; padding-bottom: 20px; font-weight: normal; }
+        .route-step:last-child { padding-bottom: 0; }
+        .route-step::before {
+            content: ''; position: absolute; left: 4px; top: 6px; width: 10px; height: 10px;
+            background-color: var(--primary); border-radius: 50%; z-index: 2;
+        }
+        .route-step.transfer::before { background-color: var(--secondary); }
+        .route-step::after {
+            content: ''; position: absolute; left: 8px; top: 16px; width: 2px; height: calc(100% - 6px);
+            background-color: #D0D8D0; z-index: 1;
+        }
+        .route-step:last-child::after { display: none; }
+        .route-station { font-size: 1em; color: var(--text-dark); margin-bottom: 4px; font-weight: normal; }
+        .route-info { font-size: 0.85em; color: var(--text-light); font-weight: normal; }
+        .route-bus-tag { display: inline-block; background: #FFF3E0; color: #E65100; padding: 2px 6px; border-radius: 4px; margin-right: 5px; font-weight: normal; }
+
+        /* Deep Dive Article Style */
+        .cultural-article { 
+            background: #FAFAFA; border: 1px solid #EEE; border-radius: 8px; padding: 20px; margin-top: 20px; 
+        }
+        .cultural-article h3 { color: var(--secondary); font-size: 1.3em; margin-top: 0; border-bottom: 1px solid #DDD; padding-bottom: 10px; font-weight: normal; }
+        .cultural-article h4 { color: var(--primary); font-size: 1.1em; margin: 20px 0 10px 0; font-weight: normal; }
+        .cultural-article p { text-align: justify; margin-bottom: 15px; font-size: 0.95em; font-weight: normal; }
+        
+        /* Photo Gallery */
+        .photo-gallery { display: flex; flex-direction: column; gap: 15px; margin: 15px 0; }
+        .photo-gallery img { width: 100%; height: 220px; object-fit: cover; object-position: center; border-radius: 6px; box-shadow: 0 3px 8px rgba(0,0,0,0.1); }
+        .photo-gallery img.bottom-align { object-position: bottom; }
+        
+        @media (min-width: 500px) {
+            .photo-gallery.two-cols { flex-direction: row; }
+            .photo-gallery.two-cols img { width: 50%; height: 250px; }
+        }
+
+        footer { text-align: center; padding: 20px; font-size: 0.85em; color: #999; margin-top: 20px; font-weight: normal; }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>Huisun Haven Guide</h1>
+    <p>A 72-Hour Symphony of Green Healing</p>
+</header>
+
+<nav class="guide-nav">
+    <button class="tab-btn active" onclick="openDay(event, 'day1')">DAY 1</button>
+    <button class="tab-btn" onclick="openDay(event, 'day2')">DAY 2</button>
+    <button class="tab-btn" onclick="openDay(event, 'day3')">DAY 3</button>
+</nav>
+
+<div class="guide-content">
+    
+    <div id="day1" class="day-panel active">
+        <button class="accordion">
+            <span class="time-badge">08:50 - 10:30</span> Arrival & Check-in
+            <span class="accordion-icon">+</span>
+        </button>
+        <div class="panel">
+            <div class="panel-block">
+                <span class="highlight-text">Daily Background:</span> Transitioning from the high-paced stress of 台中市 (Taichung City) to the tranquil environment of 惠蓀林場 (Huisun Forest Recreation Area).
+            </div>
+            <div class="panel-block">
+                <div class="tag-transport">🗺️ Transit Route Map</div>
+                <div class="route-map">
+                    <div class="route-step">
+                        <div class="route-station">台中轉運站 (Taichung Station)</div>
+                        <div class="route-info">Approx. 90 mins by highway bus</div>
+                    </div>
+                    <div class="route-step transfer">
+                        <div class="route-station">埔里轉運站 (Puli Station) (Transfer Point)</div>
+                        <div class="route-info"><span class="route-bus-tag">Nantou Bus 6899 / 6670</span> Transfer upon arrival</div>
+                    </div>
+                    <div class="route-step">
+                        <div class="route-station">惠蓀林場 (Huisun Forest Recreation Area)</div>
+                        <div class="route-info"><span class="route-bus-tag">Nantou Bus 6652 / 6653</span> Scheduled arrival (08:50 or 13:50)</div>
+                    </div>
+                </div>
+                <a href="http://www.ntbus.com.tw/hsr14.html" target="_blank" class="bus-link-btn">🔗 Taichung to Puli (6670) Route Map</a>
+                <a href="https://www.busgooo.com/bus/THB6652" target="_blank" class="bus-link-btn">🔗 Puli to Huisun (6652) Route Map</a>
+            </div>
+            <div class="tag-budget">Day 1 Budget (Per Person): Transport 400 NTD, Entrance Fee 200 NTD</div>
+        </div>
+
+        <button class="accordion">
+            <span class="time-badge">11:30 - 13:00</span> Welcome Lunch
+            <span class="accordion-icon">+</span>
+        </button>
+        <div class="panel">
+            <div class="panel-block">Enjoy local ingredients at the forest restaurant.</div>
+            <div class="photo-gallery">
+                <img src="https://angela51.com/2015-12-02-583/" alt="Forest Restaurant" onerror="this.style.display='none'">
+                <a href="https://angela51.com/2015-12-02-583/" target="_blank" class="bus-link-btn">🔗 Restaurant Info Reference</a>
+            </div>
+        </div>
+
+        <button class="accordion">
+            <span class="time-badge">13:30 - 15:30</span> Forest Exploration
+            <span class="accordion-icon">+</span>
+        </button>
+        <div class="panel">
+            <div class="panel-block">
+                <span class="highlight-text">Activity:</span> Guided "Get to Know the Forest" tour of 山嵐小徑 (Shan-Lan Trail) and 涉水步道 (She-Shui Trail).
+            </div>
+            <div class="photo-gallery">
+                <img src="https://ipapago.net/wp-content/uploads/2019/01/1548083635-034ad93dc82d0f586da837753a861933.jpg" alt="Forest Exploration Eco-tour">
+            </div>
+            <div class="panel-block">
+                <div class="tag-transport">Transport</div><br>Low-carbon walking within the forest core area.
+            </div>
+            <div class="tag-budget">Day 1 Budget (Per Person): Guided Eco-tour 300 NTD</div>
+            <div class="tag-contingency">Day 1 Contingency (Rainy Day): Replace trail walks with an indoor visit to the 森林科學博物館 (Forest Science Museum) and 咖啡展示館 (Coffee Exhibition Hall).</div>
+        </div>
+
+        <button class="accordion">
+            <span class="time-badge">19:00 - 20:30</span> Evening Healing
+            <span class="accordion-icon">+</span>
+        </button>
+        <div class="panel">
+            <div class="panel-block">
+                <span class="highlight-text">Activity:</span> Starry Night & Soundscape. A quiet, zero-cost healing session listening to the forest sounds under the stars.
+            </div>
+            <div class="photo-gallery">
+                <img src="https://www.nchu.edu.tw/upfile/web/11edebe83e21e762aacb1fc98ebf0345a0965b62.jpg" alt="Starry Night Evening Healing" class="bottom-align">
+            </div>
+        </div>
+    </div>
+
+    <div id="day2" class="day-panel">
+        <button class="accordion">
+            <span class="time-badge">08:30 - 11:30</span> Deep Forest Immersion
+            <span class="accordion-icon">+</span>
+        </button>
+        <div class="panel">
+            <div class="panel-block">
+                <span class="highlight-text">Daily Background:</span> Deepening the bond with nature through mindful practice and agricultural technical history.
+            </div>
+            <div class="panel-block">
+                <span class="highlight-text">Activity:</span> Combined Mindful trekking & Biodiversity Learning at 松風山步道 (Song-Feng Mountain Trail) or 杜鵑嶺步道 (Du-Juan Ridge Trail).
+            </div>
+            <div class="panel-block">
+                Tip: This 3-hour window allows for a slower pace to observe local flora and fauna without rushing.
+            </div>
+        </div>
+
+        <button class="accordion">
+            <span class="time-badge">11:30 - 13:30</span> Local Flavor Lunch & Rest
+            <span class="accordion-icon">+</span>
+        </button>
+        <div class="panel">
+            <div class="panel-block">Relax at the 展示中心 (Service Center) and enjoy Huisun coffee.</div>
+        </div>
+
+        <button class="accordion">
+            <span class="time-badge">13:30 - 15:30</span> Agricultural Craft
+            <span class="accordion-icon">+</span>
+        </button>
+        <div class="panel">
+            <div class="panel-block">
+                <span class="highlight-text">Activity:</span> 手炒咖啡 DIY (Hand-fried Coffee DIY) at the 咖啡展示館 (Coffee Exhibition Hall). Hands-on learning about Huisun's Arabica coffee cultivation.
+            </div>
+            <div class="photo-gallery">
+                <img src="https://i0.wp.com/shop.nchu.edu.tw/nchumart/wp-content/uploads/2021/08/%E6%8A%95%E5%BD%B1%E7%89%874.jpg?fit=2362%2C2362&ssl=1" alt="Hand-fried Coffee DIY">
+            </div>
+            <div class="tag-budget">Day 2 Budget (Per Person): Coffee Workshop 350 NTD (Note: Accommodation fees are included in the final summary.)</div>
+            
+            <div class="cultural-article">
+                <h3>Cultural Spotlight: The Heritage of Huisun Coffee</h3>
+                <div class="photo-gallery">
+                    <img src="AA5AbUAdVdwooy0z_TDADDuLta9gdnjuVoFwE0V1NZk1L3OT5UqAe9R75NKYLwjAhg3Z4z_0kqwEoXrtfQnfF7IFkH7jkY5gxEcKoiE28UlQZhl9_0cuhOYv8zWebs3rzh5uL5eyApApTScZIhCazOFHpKP7N" alt="Huisun Coffee Beans" onerror="this.style.display='none'">
+                </div>
+                
+                <h4>A Century of Brewing History</h4>
+                <p>Huisun Forest Recreation Area has been cultivating coffee since the Japanese colonial period, making it the true hometown of Taiwanese coffee. Since 1936, Huisun has been planting Arabica coffee and even won a prestigious silver medal at the World Agricultural Products Tasting Event in the United States.</p>
+                
+                <h4>Exclusive Production & Quality</h4>
+                <p>The current cultivation area spans 11.7 hectares, with an annual yield of 124 kilograms per hectare. This maintains the total production as limited and exclusive. Although its historical halo was somewhat overshadowed by the rise of Gukeng coffee, local tourism operators and agricultural groups are now collaborating with academic institutions to restore Huisun coffee's historical glory.</p>
+
+                <h4>Revitalizing the Local Industry</h4>
+                <p>With traditional agriculture declining, coffee represents the hope for the industrial vitality of Guoxing Township. Huisun Forest, affiliated with National Chung Hsing University (NCHU), utilizes its nearly 70 years of coffee cultivation technology. NCHU provides professional technical guidance, supplies seedlings, and establishes quality certification systems to unify the brand. Coupled with its rich cultural background, the mass production and proper packaging of "Huisun Coffee" are set to create another boom for Nantou's tourism industry.</p>
+            </div>
+        </div>
+
+        <button class="accordion">
+            <span class="time-badge">19:00 - 20:30</span> Night Observation
+            <span class="accordion-icon">+</span>
+        </button>
+        <div class="panel">
+            <div class="panel-block">
+                <span class="highlight-text">Activity:</span> Seasonal firefly watching (April to May) or Tree of Hope reflection activity.
+            </div>
+            <div class="photo-gallery">
+                <img src="https://twpowernews.com/Uploadfile/202505/7264668127bd38f354.jpg" alt="Firefly Watching">
+            </div>
+            <div class="tag-contingency">Day 2 Contingency (Non-Firefly Season): Replace firefly watching with a Stargazing session, Contingency (rain): stay at hotel and chill.</div>
+        </div>
+    </div>
+
+    <div id="day3" class="day-panel">
+        <button class="accordion">
+            <span class="time-badge">08:30 - 10:00</span> Final Morning in Huisun
+            <span class="accordion-icon">+</span>
+        </button>
+        <div class="panel">
+            <div class="panel-block">
+                <span class="highlight-text">Daily Background:</span> Connecting personal experiences to local cultural heritage and social sustainability.
+            </div>
+            <div class="panel-block">Enjoy a slow breakfast and visit the 園區柑仔店 (Forest Shop) for local products.</div>
+        </div>
+
+        <button class="accordion">
+            <span class="time-badge">10:30 - 11:00</span> Transport to Tribal Area
+            <span class="accordion-icon">+</span>
+        </button>
+        <div class="panel">
+            <div class="panel-block">
+                <div class="tag-transport">🗺️ Transit Route Map</div>
+                <div class="route-map">
+                    <div class="route-step">
+                        <div class="route-station">惠蓀林場 (Huisun Forest Recreation Area)</div>
+                        <div class="route-info">Bus departure time: 10:30</div>
+                    </div>
+                    <div class="route-step">
+                        <div class="route-station">清流部落 (Qingliu Tribe) (Destination)</div>
+                        <div class="route-info"><span class="route-bus-tag">Nantou Bus 6652 / 6653</span> Approx. 30 mins ride</div>
+                    </div>
+                </div>
+                <a href="https://www.busgooo.com/bus/THB6652" target="_blank" class="bus-link-btn">🔗 Huisun to Qingliu Tribe (6652) Route Map</a>
+            </div>
+        </div>
+
+        <button class="accordion">
+            <span class="time-badge">11:00 - 14:00</span> Cultural Weaving
+            <span class="accordion-icon">+</span>
+        </button>
+        <div class="panel">
+            <div class="panel-block">
+                <span class="highlight-text">Activity:</span> 賽德克織布體驗 (Seediq Traditional Weaving) at 互助村 (Mutual Village) (清流部落 (Qingliu Tribe)).
+            </div>
+            <div class="tag-budget">Day 3 Budget (Per Person): Weaving Workshop 350 NTD</div>
+            
+            <div class="cultural-article">
+                <h3>Cultural Spotlight: Seediq Weaving Heritage</h3>
+                
+                <div class="photo-gallery two-cols">
+                    <img src="https://epub.nmns.edu.tw/wp-content/uploads/2024/07/K202408-103.jpg" alt="Seediq Weaving Art 1">
+                    <img src="https://pgw.udn.com.tw/gw/photo.php?u=https://uc.udn.com.tw/photo/2024/06/24/0/29878346.jpg&x=0&y=0&sw=0&sh=0&exp=3600" alt="Seediq Weaving Art 2">
+                </div>
+                
+                <h4>Floating Weave and Heritage</h4>
+                <p>Floating weave (or weft picking) is commonly found in other Atayal branches, typically applied to cuffs or the hem of garments to highlight uniqueness, especially in wedding attire. For example, in traditional Seediq men's clothing, red yarn is woven into the cuffs of a white plain-weave fabric, decorated with black dotted or linear patterns. Floating weave is essentially extended weft picking, often forming beautiful diamond patterns on a plain weave base.</p>
+                
+                <p>From the late Qing Dynasty through the Japanese colonial period to the present, traditional Seediq weaving techniques have survived. Although nearly interrupted in the past, the craft began to recover post-war when upright looms were introduced to the tribe to improve the local economy. In the 1990s, government funding encouraged tribal women to learn weaving, bringing it to a cultural peak. Today, tribal elders collaborate with local governments to pass these precious skills down to young weavers.</p>
+
+                <h4>The Uniqueness of Puniri (Warp Picking)</h4>
+                <p>The Seediq tribe's warp picking technique exhibits unique regional characteristics. While picking techniques are found in other branches, the Seediq warp picking technique, known as Puniri, is registered as a vital cultural asset and is considered the highest level of weaving. Puniri features tightly picked warp threads forming complex, multiple floating diamond patterns. Because the picked warp threads resemble grains of rice, it is commonly referred to as "rice weave" (mini).</p>
+            </div>
+            
+            <div class="tag-contingency">Day 3 Contingency (Rainy Day): Transition to indoor botanical seed craft or essential oil workshops provided by local artisans in 清流部落 (Qingliu Tribe).</div>
+        </div>
+
+        <button class="accordion">
+            <span class="time-badge">14:00 - 15:30</span> Final Reflection & Departure
+            <span class="accordion-icon">+</span>
+        </button>
+        <div class="panel">
+            <div class="panel-block">
+                <span class="highlight-text">Conclusion:</span> Group reflection before the bus passes through the village back to 埔里 (Puli) and 台中 (Taichung).
+            </div>
+
+            <div class="panel-block">
+                <div class="tag-transport">🗺️ Return Transit Route Map</div>
+                <div class="route-map">
+                    <div class="route-step">
+                        <div class="route-station">清流部落 (Qingliu Tribe)</div>
+                        <div class="route-info">Tour concludes, prepare for departure</div>
+                    </div>
+                    <div class="route-step transfer">
+                        <div class="route-station">埔里轉運站 (Puli Station) (Transfer Point)</div>
+                        <div class="route-info"><span class="route-bus-tag">Nantou Bus 6652 / 6653</span> Transfer upon arrival</div>
+                    </div>
+                    <div class="route-step">
+                        <div class="route-station">台中轉運站 (Taichung Station)</div>
+                        <div class="route-info"><span class="route-bus-tag">Highway Bus 6899 / 6670</span> Arrive in city with healing memories</div>
+                    </div>
+                </div>
+                <a href="https://www.busgooo.com/bus/THB6652" target="_blank" class="bus-link-btn">🔗 Qingliu Tribe to Puli (6652) Route Map</a>
+                <a href="http://www.ntbus.com.tw/hsr14.html" target="_blank" class="bus-link-btn">🔗 Puli to Taichung (6670) Route Map</a>
+            </div>
+
+            <div class="tag-budget">Day 3 Budget (Per Person): Food & Market Support 1,200 NTD</div>
+        </div>
+    </div>
+</div>
+
+<footer>
+    Presented by IMPA Students<br>
+    National Chung Hsing University © 2026
+</footer>
+
+<script>
+    function openDay(evt, dayName) {
+        let i, tabcontent, tablinks;
+        tabcontent = document.getElementsByClassName("day-panel");
+        for (i = 0; i < tabcontent.length; i++) {
+            tabcontent[i].classList.remove("active");
+        }
+        tablinks = document.getElementsByClassName("tab-btn");
+        for (i = 0; i < tablinks.length; i++) {
+            tablinks[i].classList.remove("active");
+        }
+        document.getElementById(dayName).classList.add("active");
+        evt.currentTarget.classList.add("active");
+        window.scrollTo({top: 0, behavior: 'smooth'});
+    }
+
+    let acc = document.getElementsByClassName("accordion");
+    for (let i = 0; i < acc.length; i++) {
+        acc[i].addEventListener("click", function() {
+            this.classList.toggle("active");
+            let panel = this.nextElementSibling;
+            if (panel.style.maxHeight || panel.classList.contains("open")) {
+                panel.style.maxHeight = null;
+                panel.classList.remove("open");
+            } else {
+                panel.classList.add("open");
+                panel.style.maxHeight = panel.scrollHeight + 3000 + "px"; 
+            }
+        });
+    }
+</script>
+
+</body>
+</html>
