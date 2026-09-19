@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>HarvestGrip // 田間控制器</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  /* ============================================================
+     CORE THEME
+     - "Field controller" look: near-black chassis, safety-yellow
+       for the primary actuator (borrowed from heavy farm equipment
+       livery), high-vis green for "live/connected" states.
+     - Numbers use a monospace stack so telemetry digits don't
+       jitter in width as they update (important at a glance, in
+       bright sun, while a hand is busy holding a phone).
+  ============================================================ */
+  :root{
+    --bg:        #0c0f0c;
+    --panel:     #14170f;
+    --panel-2:   #1b1f16;
+    --line:      #2c3226;
+    --text:      #f2f3ee;
+    --text-dim:  #9aa290;
+    --amber:     #f5b70a;
+    --amber-dim: #7a5c05;
+    --green:     #39ff6a;
+    --red:       #ff4d3d;
+  }
+  html, body{
+    height: 100%;
+    overflow: hidden; /* zero vertical scroll: this is a single-screen console */
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang TC", "Segoe UI", Roboto, sans-serif;
+    -webkit-tap-highlight-color: transparent;
+    overscroll-behavior: none;
+  }
+  .mono{ font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace; }
+
+  /* Status LED: idle dim red, glows green with a soft pulse when connected */
+  .led{
+    width: 12px; height: 12px; border-radius: 999px;
+    background: var(--red);
+    box-shadow: 0 0 6px rgba(255,77,61,0.7);
+    transition: background .2s ease, box-shadow .2s ease;
+  }
+  .led.on{
+    background: var(--green);
+    box-shadow: 0 0 10px 2px rgba(57,255,106,0.9);
+    animation: pulse 1.6s ease-in-out infinite;
+  }
+  @keyframes pulse{
+    0%,100%{ box-shadow: 0 0 8px 1px rgba(57,255,106,0.7); }
+    50%{ box-shadow: 0 0 14px 4px rgba(57,255,106,0.95); }
+  }
+
+  /* Main actuator: kept as a manual override / live status display.
+     Primary control is now tilt-gesture + (best-effort) volume keys. */
+  #actuatorBtn{
+    -webkit-user-select:none; user-select:none;
+    touch-action: manipulation;
+    transition: transform .08s ease, background .15s ease, box-shadow .15s ease;
+    box-shadow: 0 6px 0 var(--amber-dim), 0 8px 18px rgba(0,0,0,0.5);
+  }
+  #actuatorBtn:active{ transform: translateY(4px); box-shadow: 0 2px 0 var(--amber-dim); }
+  #actuatorBtn.gripping{
+    background: var(--red);
+    box-shadow: 0 6px 0 #7a1e15, 0 8px 18px rgba(0,0,0,0.5);
+  }
+  #actuatorBtn.gripping:active{ box-shadow: 0 2px 0 #7a1e15; }
+
+  /* Pitch tile glows amber when past the tilt-grip threshold, so the
+     farmer can see at a glance what angle triggers the gripper. */
+  .tilt-armed{
+    border-color: var(--amber) !important;
+    box-shadow: inset 0 0 0 1px var(--amber);
+  }
+
+  /* Console log: fixed-height, internally scrollable, monospace */
+  #consoleLog{
+    scrollbar-width: thin;
+    scrollbar-color: var(--line) transparent;
+  }
+  #consoleLog::-webkit-scrollbar{ width: 5px; }
+  #consoleLog::-webkit-scrollbar-thumb{ background: var(--line); border-radius: 3px; }
+
+  .field-input:focus{ outline: 2px solid var(--amber); outline-offset: 1px; }
+</style>
+</head>
+<body class="h-screen w-screen flex flex-col" style="background:var(--bg);">
+
+  <!-- ============================================================
+       1) CONNECTION PANEL
+       Compact single row: IP input, Connect/Disconnect, status LED.
+  ============================================================ -->
+  <div class="shrink-0 px-3 pt-3 pb-2" style="background:var(--panel); border-bottom:1px solid var(--line);">
+    <div class="flex items-center justify-between mb-2">
+      <div class="flex items-center gap-2">
+        <div id="statusLed" class="led"></div>
+        <span id="statusText" class="text-xs mono tracking-wide" style="color:var(--text-dim);">離線</span>
+      </div>
+      <span class="text-xs mono" style="color:var(--text-dim);">田間控制器 v1.0</span>
+    </div>
+    <div class="flex gap-2">
+      <input id="ipInput" type="text" inputmode="decimal" placeholder="ws://192.168.4.1:81"
+        class="field-input mono flex-1 min-w-0 rounded-md px-3 py-3 text-base"
+        style="background:var(--panel-2); border:1px solid var(--line); color:var(--text);"
+        value="ws://192.168.4.1:81">
+      <button id="connectBtn"
+        class="shrink-0 rounded-md px-4 py-3 font-bold text-sm active:scale-95 transition"
+        style="background:var(--amber); color:#1a1400;">
+        連線
+      </button>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       2) GYROSCOPE DATA DISPLAY
+       Three compact readout tiles + a permission button (required
+       on iOS 13+ before DeviceOrientationEvent fires at all).
+       The pitch tile also doubles as the tilt-trigger indicator.
+  ============================================================ -->
+  <div class="shrink-0 px-3 py-2" style="background:var(--bg);">
+    <div class="flex items-center justify-between mb-2">
+      <span class="text-xs font-bold tracking-wide" style="color:var(--text-dim);">裝置姿態</span>
+      <button id="permBtn"
+        class="text-xs font-bold rounded px-2 py-1"
+        style="background:var(--panel-2); color:var(--amber); border:1px solid var(--amber-dim);">
+        啟用感測器
+      </button>
+    </div>
+    <div class="grid grid-cols-3 gap-2">
+      <div id="pitchTile" class="rounded-md py-2 text-center" style="background:var(--panel); border:1px solid var(--line);">
+        <div class="text-[10px] tracking-widest" style="color:var(--text-dim);">俯仰角 (β)</div>
+        <div id="pitchVal" class="mono text-xl font-bold" style="color:var(--text);">--.-</div>
+      </div>
+      <div class="rounded-md py-2 text-center" style="background:var(--panel); border:1px solid var(--line);">
+        <div class="text-[10px] tracking-widest" style="color:var(--text-dim);">翻滾角 (γ)</div>
+        <div id="rollVal" class="mono text-xl font-bold" style="color:var(--text);">--.-</div>
+      </div>
+      <div class="rounded-md py-2 text-center" style="background:var(--panel); border:1px solid var(--line);">
+        <div class="text-[10px] tracking-widest" style="color:var(--text-dim);">偏航角 (α)</div>
+        <div id="yawVal" class="mono text-xl font-bold" style="color:var(--text);">--.-</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       3) MAIN CONTROL ACTUATOR
+       No longer the required interaction: it now mirrors whatever
+       state tilt-gesture / volume keys set, and also accepts a
+       direct tap as a manual override / fallback.
+  ============================================================ -->
+  <div class="flex-1 min-h-0 px-3 pb-2 flex flex-col">
+    <button id="actuatorBtn"
+      class="flex-1 w-full rounded-2xl flex flex-col items-center justify-center gap-1 active:scale-[0.98]"
+      style="background:var(--amber); color:#1a1400;">
+      <span id="actuatorLabel" class="text-4xl font-black tracking-wide">夾取</span>
+      <span id="actuatorSub" class="text-sm font-semibold opacity-70">傾斜手腕、按音量鍵，或直接點擊</span>
+    </button>
+  </div>
+
+  <!-- ============================================================
+       4) SYSTEM CONSOLE
+       Fixed-height scrollable log — connection events, outbound
+       WS frames, and alerts. Newest entry at the bottom.
+  ============================================================ -->
+  <div class="shrink-0 flex flex-col" style="height:26vh; background:#090a08; border-top:1px solid var(--line);">
+    <div class="shrink-0 px-3 py-1 text-[10px] font-bold tracking-widest" style="color:var(--text-dim); background:var(--panel);">
+      系統日誌
+    </div>
+    <div id="consoleLog" class="flex-1 min-h-0 overflow-y-auto px-3 py-1 mono text-[11px] leading-5"></div>
+  </div>
+
+<script>
+/* ================================================================
+   HARVESTGRIP CONTROLLER — CORE LOGIC
+   Kept modular and heavily commented so it's easy to splice into
+   your ESP32-S firmware test harness.
+
+   Expected ESP32-S side:
+     - Runs a WebSocket server (e.g. arduinoWebSockets library) on
+       the port given in the IP field above (default :81).
+     - Receives plain text/JSON commands: {"cmd":"GRIP"} / {"cmd":"RELEASE"}
+       and optional {"cmd":"ORIENT","pitch":..,"roll":..,"yaw":..}
+     - Optionally sends back status text, which is logged verbatim.
+   Adjust the wire format in sendCommand() / ws.onmessage to match
+   whatever your firmware actually expects.
+
+   TRIGGER SOURCES — three independent input paths all converge on
+   the same triggerGrip()/triggerRelease() functions, so there is
+   no "mode switch" to learn:
+     1. Tilt gesture (gyroscope pitch) — primary, hands-already-busy
+        control. Tilt the wrist forward past a threshold to grip,
+        level back out to release.
+     2. Hardware volume keys — best effort only. See the big caveat
+        in section 5 below before relying on this.
+     3. Direct tap on the big button — manual override / fallback,
+        always available regardless of sensor state.
+================================================================ */
+
+// ---------- 0. SHARED STATE ----------
+let ws = null;                 // active WebSocket instance
+let isConnected = false;
+let isGripping = false;
+let orientationEnabled = false;
+let lastOrientationSendTs = 0;
+const ORIENTATION_SEND_INTERVAL_MS = 150; // throttle so we don't flood the socket
+
+// Tilt-gesture thresholds (degrees, pitch/beta). Calibrate these to
+// how the phone is actually held/mounted on the farmer's wrist —
+// beta's zero point and sign depend on mounting orientation.
+const TILT_GRIP_THRESHOLD    = 50; // past this angle -> auto GRIP
+const TILT_RELEASE_THRESHOLD = 25; // below this angle -> auto RELEASE
+// (the 25-50 gap is a dead zone / hysteresis band so the gripper
+//  doesn't chatter when the hand rests near the threshold)
+
+// ---------- DOM refs ----------
+const ipInput       = document.getElementById('ipInput');
+const connectBtn     = document.getElementById('connectBtn');
+const statusLed      = document.getElementById('statusLed');
+const statusText     = document.getElementById('statusText');
+const permBtn        = document.getElementById('permBtn');
+const pitchTile      = document.getElementById('pitchTile');
+const pitchVal       = document.getElementById('pitchVal');
+const rollVal        = document.getElementById('rollVal');
+const yawVal         = document.getElementById('yawVal');
+const actuatorBtn    = document.getElementById('actuatorBtn');
+const actuatorLabel  = document.getElementById('actuatorLabel');
+const actuatorSub    = document.getElementById('actuatorSub');
+const consoleLog     = document.getElementById('consoleLog');
+
+// ---------- 1. CONSOLE LOGGING ----------
+// Single funnel for every event so the on-screen console is a
+// faithful mirror of what's happening on the wire.
+function logToConsole(message, type = 'info') {
+  const colors = {
+    info:  '#9aa292',
+    ok:    '#39ff6a',
+    warn:  '#f5b70a',
+    error: '#ff4d3d',
+    tx:    '#7fd1ff',
+  };
+  const time = new Date().toLocaleTimeString('zh-TW', { hour12: false });
+  const line = document.createElement('div');
+  line.style.color = colors[type] || colors.info;
+  line.textContent = `[${time}] ${message}`;
+  consoleLog.appendChild(line);
+  // auto-scroll to newest line
+  consoleLog.scrollTop = consoleLog.scrollHeight;
+}
+
+// ---------- 2. WEBSOCKET CONNECTION MODULE ----------
+function setConnectedUI(connected) {
+  isConnected = connected;
+  statusLed.classList.toggle('on', connected);
+  statusText.textContent = connected ? '連線中' : '離線';
+  connectBtn.textContent = connected ? '中斷連線' : '連線';
+  ipInput.disabled = connected;
+}
+
+function connectWebSocket() {
+  const url = ipInput.value.trim();
+  if (!url) {
+    logToConsole('尚未輸入位址。', 'error');
+    return;
+  }
+  // Basic sanity check — ESP32 WS servers are almost always ws:// (not wss://)
+  if (!/^wss?:\/\//i.test(url)) {
+    logToConsole(`位址格式錯誤，須以 ws:// 或 wss:// 開頭（目前輸入：${url}）`, 'error');
+    return;
+  }
+
+  logToConsole(`正在連線至 ${url} ...`, 'info');
+
+  try {
+    ws = new WebSocket(url);
+  } catch (err) {
+    logToConsole(`無法建立連線：${err.message}`, 'error');
+    return;
+  }
+
+  ws.onopen = () => {
+    setConnectedUI(true);
+    logToConsole('WebSocket 連線成功。', 'ok');
+  };
+
+  ws.onmessage = (event) => {
+    // Anything the ESP32 sends back (ack, sensor feedback, errors) lands here.
+    logToConsole(`收到：${event.data}`, 'info');
+  };
+
+  ws.onerror = (err) => {
+    logToConsole('連線發生錯誤，請確認 IP／埠號正確，且手機與 ESP32 在同一網路。', 'error');
+  };
+
+  ws.onclose = (event) => {
+    setConnectedUI(false);
+    logToConsole(`連線已中斷（代碼 ${event.code}）。`, 'warn');
+    ws = null;
+  };
+}
+
+function disconnectWebSocket() {
+  if (ws) {
+    ws.close();
+  }
+}
+
+// Single choke-point for anything we transmit, so the wire format
+// lives in exactly one place — change this to match your firmware.
+function sendCommand(payloadObj) {
+  if (!ws || ws.readyState !== WebSocket.OPEN) {
+    logToConsole('尚未連線，無法傳送指令。', 'warn');
+    return;
+  }
+  const message = JSON.stringify(payloadObj);
+  ws.send(message);
+  logToConsole(`傳送：${message}`, 'tx');
+}
+
+connectBtn.addEventListener('click', () => {
+  if (isConnected) {
+    disconnectWebSocket();
+  } else {
+    connectWebSocket();
+  }
+});
+
+// ---------- 3. UNIFIED GRIP / RELEASE TRIGGER ----------
+// Every input path (tilt, volume key, tap) calls one of these two
+// functions. Each is a no-op if we're already in that state, so
+// multiple input sources never fight each other or double-send.
+function setActuatorUI(gripping) {
+  isGripping = gripping;
+  actuatorBtn.classList.toggle('gripping', gripping);
+  actuatorLabel.textContent = gripping ? '放開' : '夾取';
+  actuatorSub.textContent = gripping ? '傾斜手腕、按音量鍵，或直接點擊以放開' : '傾斜手腕、按音量鍵，或直接點擊以夾取';
+}
+
+function sourceLabel(source) {
+  return { tilt: '傾斜手勢', 'volume-key': '音量鍵', tap: '點擊' }[source] || source;
+}
+
+function triggerGrip(source) {
+  if (isGripping) return; // already gripping — ignore duplicate triggers
+  setActuatorUI(true);
+  sendCommand({ cmd: 'GRIP' });
+  logToConsole(`夾取指令已送出（來源：${sourceLabel(source)}）`, 'warn');
+}
+
+function triggerRelease(source) {
+  if (!isGripping) return; // already released — ignore duplicate triggers
+  setActuatorUI(false);
+  sendCommand({ cmd: 'RELEASE' });
+  logToConsole(`放開指令已送出（來源：${sourceLabel(source)}）`, 'ok');
+}
+
+// Tap on the big button — manual override, always available.
+actuatorBtn.addEventListener('click', () => {
+  if (isGripping) triggerRelease('tap'); else triggerGrip('tap');
+});
+
+// ---------- 4. DEVICE ORIENTATION (GYROSCOPE) MODULE ----------
+// iOS 13+ requires an explicit user gesture + permission request
+// before 'deviceorientation' events are dispatched at all. Android
+// / older iOS fire immediately, so we handle both paths.
+function handleOrientationEvent(event) {
+  // beta = front-back tilt (pitch), gamma = left-right tilt (roll),
+  // alpha = compass heading (yaw)
+  const pitch = event.beta ?? 0;
+  const roll  = event.gamma ?? 0;
+  const yaw   = event.alpha ?? 0;
+
+  pitchVal.textContent = pitch.toFixed(1);
+  rollVal.textContent  = roll.toFixed(1);
+  yawVal.textContent   = yaw.toFixed(1);
+
+  // Tilt-gesture trigger: primary hands-free control path.
+  const armed = pitch > TILT_GRIP_THRESHOLD;
+  pitchTile.classList.toggle('tilt-armed', armed);
+  if (pitch > TILT_GRIP_THRESHOLD) {
+    triggerGrip('tilt');
+  } else if (pitch < TILT_RELEASE_THRESHOLD) {
+    triggerRelease('tilt');
+  }
+
+  // Throttle outbound orientation telemetry so we don't saturate the
+  // WebSocket / ESP32's processing loop with 60Hz updates.
+  const now = Date.now();
+  if (isConnected && now - lastOrientationSendTs > ORIENTATION_SEND_INTERVAL_MS) {
+    lastOrientationSendTs = now;
+    sendCommand({
+      cmd: 'ORIENT',
+      pitch: Number(pitch.toFixed(1)),
+      roll:  Number(roll.toFixed(1)),
+      yaw:   Number(yaw.toFixed(1)),
+    });
+  }
+}
+
+function startOrientationListening() {
+  window.addEventListener('deviceorientation', handleOrientationEvent);
+  orientationEnabled = true;
+  permBtn.textContent = '感測器已啟用';
+  permBtn.disabled = true;
+  permBtn.style.opacity = '0.5';
+  logToConsole('方向感測器已啟動，傾斜手腕即可觸發夾取／放開。', 'ok');
+}
+
+permBtn.addEventListener('click', async () => {
+  // Path A: iOS 13+ — DeviceOrientationEvent.requestPermission exists
+  // and MUST be called from within a user gesture handler (this click).
+  if (typeof DeviceOrientationEvent !== 'undefined' &&
+      typeof DeviceOrientationEvent.requestPermission === 'function') {
+    try {
+      const result = await DeviceOrientationEvent.requestPermission();
+      if (result === 'granted') {
+        startOrientationListening();
+      } else {
+        logToConsole('使用者拒絕了動作感測器權限。', 'error');
+      }
+    } catch (err) {
+      logToConsole(`權限請求失敗：${err.message}`, 'error');
+    }
+    return;
+  }
+
+  // Path B: Android / other browsers — no permission prompt needed,
+  // events fire as soon as we attach the listener.
+  if (window.DeviceOrientationEvent) {
+    startOrientationListening();
+  } else {
+    logToConsole('此裝置／瀏覽器不支援方向感測器。', 'error');
+  }
+});
+
+// ---------- 5. HARDWARE VOLUME KEYS (BEST EFFORT — READ THIS) ----------
+// IMPORTANT CAVEAT: stock mobile browsers (iOS Safari, and Android
+// Chrome in a normal browser tab) intercept the physical volume
+// rocker at the OS level to adjust system/media volume, and never
+// dispatch a keydown/keyup event to page JavaScript for it. This is
+// a platform restriction, not something fixable from web code alone.
+// The same is true of Bluetooth "shutter remote" style clickers that
+// emulate a volume-key press — the OS still eats the event first.
+//
+// This listener is included because it costs nothing to have, and
+// WILL work in two real setups:
+//   (a) the page is wrapped in a native shell / WebView (e.g. a
+//       Capacitor or custom Android app) whose native code overrides
+//       onKeyDown for KEYCODE_VOLUME_UP/DOWN and forwards it to the
+//       page — this is exactly how native camera apps use the volume
+//       button as a shutter button;
+//   (b) an external wired/Bluetooth keyboard is used, whose dedicated
+//       volume keys some browsers do pass through as 'AudioVolumeUp'
+//       / 'AudioVolumeDown'.
+// If you test this on a plain phone browser and nothing happens when
+// you press the physical rocker, that's the expected OS-level
+// interception above — not a bug in this file. The tilt gesture in
+// section 4 is the reliable no-tap control path for that case.
+window.addEventListener('keydown', (e) => {
+  if (e.code === 'AudioVolumeUp' || e.key === 'AudioVolumeUp') {
+    e.preventDefault();
+    triggerGrip('volume-key');
+  } else if (e.code === 'AudioVolumeDown' || e.key === 'AudioVolumeDown') {
+    e.preventDefault();
+    triggerRelease('volume-key');
+  }
+});
+
+// ---------- 6. BOOT ----------
+logToConsole('系統已就緒。', 'ok');
+logToConsole('請輸入 ESP32 WebSocket 位址並按下「連線」。', 'info');
+logToConsole('提示：多數手機瀏覽器無法讀取實體音量鍵，如按鍵無反應，請改用傾斜手腕手勢（見上方說明）。', 'warn');
+</script>
+</body>
+</html>
