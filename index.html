@@ -6,7 +6,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="theme-color" content="#0a0c0f" />
-  <title>智慧採收輔助系統 </title>
+  <title>智慧採收輔助系統 · 數位雙生控制器</title>
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
@@ -205,13 +205,22 @@
     <section class="panel px-3 py-2.5 shrink-0" aria-label="手機姿態">
       <div class="flex items-center justify-between mb-2 gap-2">
         <h2 class="text-[0.75rem] font-black text-industrial-text">即時姿態（陀螺儀）</h2>
-        <button
-          id="btnOrientPerm"
-          type="button"
-          class="rounded-md border border-industrial-accent text-industrial-accent text-[0.7rem] font-bold px-2.5 py-1.5 active:scale-95 transition"
-        >
-          啟用感測器
-        </button>
+        <div class="flex items-center gap-1.5">
+          <button
+            id="btnTare"
+            type="button"
+            class="rounded-md border border-industrial-border bg-industrial-panel text-industrial-accent text-[0.7rem] font-bold px-2 py-1.5 active:scale-95 transition hover:border-industrial-accent"
+          >
+            校零 Tare
+          </button>
+          <button
+            id="btnOrientPerm"
+            type="button"
+            class="rounded-md border border-industrial-accent text-industrial-accent text-[0.7rem] font-bold px-2 py-1.5 active:scale-95 transition"
+          >
+            啟用感測器
+          </button>
+        </div>
       </div>
       <div class="grid grid-cols-3 gap-2 text-center">
         <div class="rounded-md bg-industrial-bg border border-industrial-border py-1.5">
@@ -292,6 +301,7 @@
       statusDot: $('statusDot'),
       statusLabel: $('statusLabel'),
       btnOrientPerm: $('btnOrientPerm'),
+      btnTare: $('btnTare'),
       valPitch: $('valPitch'),
       valRoll: $('valRoll'),
       valYaw: $('valYaw'),
@@ -494,10 +504,12 @@
     const OrientationSensor = (() => {
       let enabled = false;
       let lastSentAt = 0;
-      const SEND_INTERVAL_MS = 50; // ~20 Hz，兼顧低延遲與頻寬
+      const SEND_INTERVAL_MS = 40; // ~25 Hz，兼顧低延遲與流暢度
+      const MIN_DELTA_DEG = 0.35;  // 增量過濾閥值（度）：避免手機靜止時高頻無效封包堵塞 ESP32
 
       /** 目前姿態（度） */
       const attitude = { pitch: 0, roll: 0, yaw: 0 };
+      let lastSentAttitude = { pitch: 0, roll: 0, yaw: 0 };
 
       function formatDeg(v) {
         if (!Number.isFinite(v)) return '--.-°';
@@ -512,7 +524,7 @@
 
       /**
        * DeviceOrientation 事件處理。
-       * 約定對應（便於與機械臂座標系對齊，可依硬體再調）：
+       * 約定對應（便於與機械臂座標系對齊）：
        *   pitch ← beta   （前後傾斜，約 -180~180）
        *   roll  ← gamma  （左右傾斜，約 -90~90）
        *   yaw   ← alpha  （羅盤方位，0~360）
@@ -530,18 +542,45 @@
         attitude.yaw = Number(alpha) || 0;
         updateUi();
 
-        // 節流後透過 WebSocket 推送姿態（數位雙生）
+        // 節流與增量過濾後透過 WebSocket 推送姿態（數位雙生）
         const now = Date.now();
         if (now - lastSentAt >= SEND_INTERVAL_MS) {
-          lastSentAt = now;
-          Esp32Socket.send({
-            cmd: 'attitude',
-            pitch: +attitude.pitch.toFixed(2),
-            roll: +attitude.roll.toFixed(2),
-            yaw: +attitude.yaw.toFixed(2),
-            t: now,
-          }, /* silent */ true);
+          const dPitch = Math.abs(attitude.pitch - lastSentAttitude.pitch);
+          const dRoll  = Math.abs(attitude.roll  - lastSentAttitude.roll);
+          const dYaw   = Math.abs(attitude.yaw   - lastSentAttitude.yaw);
+
+          // 僅在發生顯著角度變化時發送，防止 ESP32 緩衝區溢位
+          if (dPitch >= MIN_DELTA_DEG || dRoll >= MIN_DELTA_DEG || dYaw >= MIN_DELTA_DEG) {
+            lastSentAt = now;
+            lastSentAttitude = { ...attitude };
+
+            Esp32Socket.send({
+              cmd: 'attitude',
+              pitch: +attitude.pitch.toFixed(2),
+              roll: +attitude.roll.toFixed(2),
+              yaw: +attitude.yaw.toFixed(2),
+              t: now,
+            }, /* silent */ true);
+          }
         }
+      }
+
+      /**
+       * 姿態校零 (Tare)
+       */
+      function tare() {
+        if (!Esp32Socket.isOpen()) {
+          log('尚未連線，無法發送歸零指令', 'warn');
+          return;
+        }
+        Esp32Socket.send({
+          cmd: 'tare',
+          pitch: +attitude.pitch.toFixed(2),
+          roll: +attitude.roll.toFixed(2),
+          yaw: +attitude.yaw.toFixed(2),
+          t: Date.now(),
+        });
+        log('已發送姿態校零 (Tare) 指令', 'ok');
       }
 
       /**
@@ -580,8 +619,11 @@
         requestPermissionAndStart();
       });
 
+      el.btnTare.addEventListener('click', tare);
+
       return {
         requestPermissionAndStart,
+        tare,
         getAttitude: () => ({ ...attitude }),
         isEnabled: () => enabled,
       };
@@ -702,6 +744,12 @@
             const msg = JSON.parse(data);
             if (msg && msg.evt === 'status' && msg.msg) {
               log(`硬體狀態：${msg.msg}`, 'warn');
+            } else if (msg && msg.evt === 'ack') {
+              if (msg.cmd === 'grip') {
+                log(`硬體確認：夾爪已${msg.state === 'close' ? '夾取' : '釋放'}`, 'ok');
+              } else if (msg.cmd === 'tare') {
+                log('硬體確認：姿態原點已校零歸位', 'ok');
+              }
             }
           } catch (_) {
             /* 非 JSON 文字幀也照常顯示 */
